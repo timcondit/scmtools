@@ -18,61 +18,63 @@
 # define the preamble as svn://Chinook/EPS/branches, and use whatever follows
 # as the pattern to match.
 
+import os.path
 import sys
 from xml.etree.ElementTree import ElementTree
 
 DEBUG = False
 
 class MergeFinder(object):
-    def __init__(self, dat):
-        self.datafile = dat
+    '''DOCSTRING'''
+    def __init__(self, data_file, branch_str):
+        '''DOCSTRING'''
+        self.data_file = data_file
+        self.mi_dict = {}
+        self.branch_str = os.path.normpath(branch_str)
 
-    # Generates a dictionary with (key = target URL) and (value = list of
-    # paths with their transactions).  It looks like this.  Note the empty
-    # list at the end.
-    #
-    # {
-    # 'svn://chinook/eps/branches/projects/merlin10/docs': [
-    #    '/branches/9.10/maintenance/9.10.0112/docs:9636',
-    #    '/branches/9.10/maintenance/PRN22180/docs:9424' ],
-    #
-    # 'svn://chinook/eps/branches/developers/danf/RadUpdate/src/server': [
-    #    '/branches/9.7/Initial/base/src/server:6330-6336',
-    #    '/branches/9.7/SP1/EB/DMCC/src/server:6683-7744',
-    #    '/branches/9.7/SP1/base/src/server:6337-6682',
-    #    '/branches/projects/DMCC09/src/server:7540-7863',
-    #    '/branches/projects/July09/src/server:7600-8120',
-    #    '/trunk/src/server:6542-7602' ],
-    #
-    # 'svn://chinook/eps/branches/projects/Dartboard09/setup/installs/Server': [],
-    # }
-    #
     def mergeinfo_dict(self):
-#        tree = ElementTree(file=sys.argv[1])
-        tree = ElementTree(file=self.datafile)
+        '''return all URLs with properties containing PATH text'''
+        tree = ElementTree(file=self.data_file)
         parent_map = dict((c, p) for p in tree.getiterator() for c in p)
-        self.mergeinfo_dict = {}
-        for target in parent_map:   # parent (URL)
-            for property in target: # child (paths and txns)
+        for target in parent_map:   # URL
+            for property in target: # paths
                 _list = []
-                for line in property.text.splitlines():
-                    ln = line.strip()
-                    if ln == "":
-                        if DEBUG:
-                            print "[DEBUG] skipping empty string"
-                        pass
-                    else:
-                        _list.append(ln)
-                # don't add URLs without PATHs
-                if len(_list) > 0:
-                    self.mergeinfo_dict[target.attrib['path']] = _list
-        return self.mergeinfo_dict
+                # CAREFUL: this matches on whitespace, so it's affected by
+                # the formatting of the file
+                if property.text:
+                    for line in property.text.splitlines():
+                        ln = line.strip()
+                        if ln == "":
+                            if DEBUG:
+                                print "[DEBUG] skipping empty string"
+                        else:
+                            _list.append(os.path.normpath(ln))
+                    if len(_list) > 0:
+                        self.mi_dict[target.attrib['path']] = _list
+        return self.mi_dict
 
-    def mergefinder(self, path_str):
-        # what does this look like?
-        pass
+    # branch_str is the string to match against the values of mergeinfo_dict;
+    # if a match is found, the key that contains the matching value is saved;
+    # when the whole list is processed, the matching keys are returned.
+    #def mergefinder(self, branch_str):
+    def mergefinder(self):
+        '''DOCSTRING'''
+        path_list = []
+        for url, paths in self.mi_dict.items():
+            for path in paths:
+                # NB: there is only one possible matching path per branch, so
+                # this is sort of broken; TODO (in what way?); it needs to ...
+                if self.branch_str in path:
+                    path_list.append(url)
+                    print "URL:", url
+                    print "  PATH:", path
+                    print
+#        for path in path_list:
+#            print path
+        #return path_list
 
     def ugly_print(self, dict):
+        '''DOCSTRING'''
         # key is a string, values is a list of strings
         for key, values in dict.items():
             print "URL:", key
@@ -80,7 +82,15 @@ class MergeFinder(object):
                 print "  PATH:", value
             print
 
-mf = MergeFinder('mini.xml')
-mf.ugly_print(mf.mergeinfo_dict())
-#mergeinfo_dict()
+#            /branches/9.7/SP1/EB/DMCC/src/server:6683-7744
+#mf = MergeFinder('mini.xml', r"branches/9.7/SP1/EB/DMCC")
+#            /branches/9.10/maintenance/PRN22180/docs:9424
+#mf = MergeFinder('mini.xml', r"branches/9.10/maintenance/PRN22180")
+#mf = MergeFinder('mini.xml', r"branches\9.10\maintenance\PRN22180")
+#mf = MergeFinder('mergeinfo_chinook_eps_branches.xml', r"branches\9.10\maintenance\PRN22180")
+#mf = MergeFinder('mergeinfo_chinook_eps_branches.xml', r"branches")
+#mf = MergeFinder('mini.xml', r"branches/9.10/maintenance/9.10.0001")
+mf = MergeFinder('mini.xml', r"branches/9.10/maintenance/9.10.0112")
+mf.mergeinfo_dict()
+mf.mergefinder()
 
