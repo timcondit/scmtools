@@ -27,14 +27,6 @@ class MergeFinder(object):
     def __init__(self, dat):
         self.datafile = dat
 
-    def ugly_print(self, dict):
-        # key is a string, values is a list of strings
-        for key, values in dict.items():
-            print "URL:", key
-            for value in values:
-                print "  PATH:", value
-            print
-
     # Generates a dictionary with (key = target URL) and (value = list of
     # paths with their transactions).  It looks like this.  Note the empty
     # list at the end.
@@ -79,6 +71,14 @@ class MergeFinder(object):
     def mergefinder(self, path_str):
         # what does this look like?
         pass
+
+    def ugly_print(self, dict):
+        # key is a string, values is a list of strings
+        for key, values in dict.items():
+            print "URL:", key
+            for value in values:
+                print "  PATH:", value
+            print
 
 mf = MergeFinder('mini.xml')
 mf.ugly_print(mf.mergeinfo_dict())
